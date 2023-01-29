@@ -1,0 +1,258 @@
+---
+title: "Fatal Encounters / Census Blocks Proof of Concept"
+author: "Kieran Healy"
+date: "2023-01-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse) # Make sure you have the latest version
+library(colorspace)
+library(tidycensus) # You will need a Census API key. See: https://walker-data.com/tidycensus/articles/basic-usage.html
+library(tigris)
+library(sf)
+library(googlesheets4) # You do *not* need a token for public read-only sheets.
+gs4_deauth() # Just accessing public sheets, no need for an OAUTH token
+
+library(here)
+
+## https://fatalencounters.org/spreadsheets/
+fe_sheet <- "https://docs.google.com/spreadsheets/d/1dKmaV_JiWcG8XBoRgP8b4e9Eopkpgt7FL7nyspvzAsE/edit#gid=0"
+
+
+options(tigris_use_cache = TRUE)
+```
+
+
+## Get the Fatal Encounters Data
+
+```{r}
+## This will take a moment
+fatal_df_raw <- read_sheet(ss = fe_sheet, 
+                       sheet = "Form Responses") 
+```
+
+```{r}
+fatal_df <- fatal_df_raw |> 
+  janitor::clean_names() |> 
+  rename(date = date_of_injury_resulting_in_death_month_day_year) |> 
+  select(unique_id:imputation_probability, date, 
+         location_of_injury_address:longitude) |> 
+  relocate(unique_id, latitude, longitude, everything())
+```
+
+Let's do, say, census tracts for Los Angeles County, California. 
+
+Filter on the California cases and convert them to a spatial data frame. This will allow us to do the spatial join in a minute. 
+
+```{r}
+fatal_ca <- fatal_df |> 
+    filter(state == "CA") |> 
+  st_as_sf(coords = c("longitude", "latitude"), 
+           crs = "NAD83") # This is the same as the Census CRS is going to be in.
+
+```
+
+
+## Get Tidycensus Data
+
+Now get the tract-level data from the Census. We'll use ACS data for LA County _only_. Let's ask it for income estimates. 
+
+```{r}
+
+la_tract_income <- get_acs(
+  geography = "tract", 
+  variables = "B19013_001", # HH Income
+  state = "CA", 
+  county = "Los Angeles", 
+  geometry = TRUE) |>   
+  separate_wider_regex(
+    NAME,
+    patterns = c(
+      "Census Tract ", tract = "\\d+.\\d+", ", ",
+      county = "[^,]+", ", ",
+      state = ".*"
+    )
+  ) |> 
+  st_as_sf()
+
+```
+
+Now we have, 
+
+```{r}
+fatal_ca 
+```
+
+And we have, 
+
+```{r}
+la_tract_income
+```
+
+
+## Spatial Point-in-Polygon Merge
+
+Because we only asked the Census for LA County tract data, but we have all the fatal encounters for CA, we want to attribute the tract-level information to those rows of the Fatal Encounters data that occured in LA county. Also we want the right tract. So we use the Lat/Lon data in the Fatal Encounters table to see which tract every encounter is in and merge on that basis. This is a spatial join.
+
+We will end up with the Census-derived data attributed to the rows of the Fatal Encounters data (where appropriate). 
+
+```{r}
+ca_pip <- st_join(fatal_ca, la_tract_income, join = st_within)
+```
+
+Now we have, 
+
+```{r}
+ca_pip
+```
+
+Or more usefully, 
+
+```{r}
+ca_pip |> 
+  select(unique_id, date, location_of_death_county, tract, county, estimate)
+```
+
+You can see that `la_pip` is still all incidents in California. But now the ones in LA have tract information attached to them, and the variable we got from the ACS (the income estimate) is merged in as well. And this was all done using Lat/Lon rather than trying to parse each address or whatever. 
+
+
+## Checking
+
+But we still need to check! Let's drop all the rows with missing values on `tract`, which should give us all and only LA County tracts.  
+
+```{r}
+la_pip <- ca_pip |> 
+  drop_na(tract)
+
+la_pip
+```
+
+Down to ~1300 incidents. Quick map of the points:
+
+
+```{r}
+ggplot(la_pip) + 
+  geom_sf()
+```
+
+Looks OK. 
+
+But, I also know there are some bad Lat/Lon records in the data. Here's the `fatal_ca` table again, filtered manually by the location data in it:
+
+```{r}
+fatal_ca |> 
+  filter(location_of_death_county == "Los Angeles")
+```
+
+If we draw a map of this we see something is off:
+
+```{r}
+fatal_ca |> 
+  filter(location_of_death_county == "Los Angeles") |> 
+  ggplot() + 
+  geom_sf()
+```
+
+The hell is that point up there at >40N and >80W?
+
+```{r}
+chk <- fatal_ca |> 
+  filter(location_of_death_county == "Los Angeles") |> 
+  st_coordinates() |> 
+  as_tibble() |> 
+  mutate(bad_y = Y > 36)  
+
+tmp <- fatal_ca |> 
+  filter(location_of_death_county == "Los Angeles") |> 
+  select(location_of_injury_address) 
+tmp[chk$bad_y,]
+```
+
+This is the bad record. There's an Elmer Ave in North Hollywood, consistent
+with the rest of the record, but the Lat and Long are wrong. (That location is in the middle
+of the Barents Sea, in the Arctic.)  
+
+The spatial join drops it because the Lat/Lon doesn't correspond to an LA County tract. But that record is in the data as a Fatal Encounter. Let's ignore it for now. But! I don't like it that I found a bad geo record in the FE data on the very first random pass through. 
+
+## Second cut at the pointwise map:
+
+Back to `la_pip`: 
+
+
+
+```{r}
+la_pip
+
+# Add a "Fatal Encounter" column with the same value for every row, for the purposes of the map we're about to draw
+la_pip_clean <- la_pip |> 
+  mutate(fe = "Fatal Encounter")
+```
+
+
+## Track Checking
+
+For a nice map we'll need two objects---the  tract table and the `la_pip_clean` table. This is because one has the tract map shapes and the other has the point locations of the FEs. Let's use the Census polygons now. The base map looks like this:
+
+```{r}F
+la_tract_income |> 
+  ggplot() + 
+  geom_sf()
+```
+
+The two weird tracts in the south are Santa Catalina Island and San Clemente Island. Let's get rid of those. 
+
+```{r}
+la_tract_income_clean <- la_tract_income |> 
+  filter(!str_detect(tract, "599"))
+
+la_tract_income_clean |> 
+  ggplot() + 
+  geom_sf()
+
+```
+
+
+## Nicer Map
+
+Finally, we'll fix the projections so that they're right for LA County. 
+
+```{r}
+la_tract_income_clean <- st_transform(la_tract_income_clean, "EPSG:6423")
+la_pip_clean <- st_transform(la_pip_clean, "EPSG:6423")
+```
+
+And draw a map:
+
+```{r}
+p <- la_tract_income_clean |> 
+  ggplot() + 
+  geom_sf(mapping = aes(fill = estimate)) + 
+  geom_sf(data = la_pip_clean, 
+          mapping = aes(color = fe),  
+          fill = "orange",
+          pch = 21, 
+          stroke = 0.2,
+          size = 0.8) +
+  scale_fill_binned_sequential(labels = scales::label_dollar()) +
+  scale_color_manual(values = "black") + 
+  guides(colour = guide_legend(override.aes = list(size=2, color = "orange"))) + 
+  labs(fill = "Estimated Income", 
+       color = NULL,
+       title = "Point-in-Polygon Proof of Concept", 
+       subtitle = "ACS Income Data and Fatal Encounters Data for Los Angeles County, at the Census Tract Level") + 
+  kjhslides::kjh_theme_map() 
+  
+print(p)
+```
+
+Save it out to a PDF:
+
+```{r}
+ggsave(here("figures", "pip-example.pdf"), plot = p, width = 12, height = 10)
+```
+
+
+
