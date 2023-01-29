@@ -358,6 +358,24 @@ Concept</h1>
 </div>
 
 
+<p>The <code>Rmd</code> file and so on is here: <a href="https://github.com/kjhealy/fatal_enc" class="uri">https://github.com/kjhealy/fatal_enc</a></p>
+<pre class="r"><code>knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse) # Make sure you have the latest version
+library(colorspace)
+library(tidycensus) # You will need a Census API key. See: https://walker-data.com/tidycensus/articles/basic-usage.html
+library(tigris)
+library(sf)
+library(googlesheets4) # You do *not* need a token for public read-only sheets.
+gs4_deauth() # Just accessing public sheets, no need for an OAUTH token
+
+library(here)
+
+## https://fatalencounters.org/spreadsheets/
+fe_sheet &lt;- &quot;https://docs.google.com/spreadsheets/d/1dKmaV_JiWcG8XBoRgP8b4e9Eopkpgt7FL7nyspvzAsE/edit#gid=0&quot;
+
+
+options(tigris_use_cache = TRUE)</code></pre>
 <div id="get-the-fatal-encounters-data" class="section level2">
 <h2>Get the Fatal Encounters Data</h2>
 <pre class="r"><code>## This will take a moment

@@ -5,7 +5,9 @@ date: "2023-01-29"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+The `Rmd` file and so on is here: <https://github.com/kjhealy/fatal_enc>
+
+```{r setup, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse) # Make sure you have the latest version
