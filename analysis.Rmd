@@ -70,8 +70,6 @@ fatal_ca
 
 See how the call to `st_as_sf()` has used the latitude/longitude columns to convert the fatal encounters table in to a proper `sf` object with a CRS and a point geometry column. This is what will let us do spatial stuff below, like merging/joining data based on whether an FE case is within a specific census tract boundary. 
 
-And we have, 
-
 
 ## Get Census Bureau Data
 
@@ -225,7 +223,7 @@ la_pip_clean <- la_pip |>
 
 For a model you might use e.g. an encounter-level table of data with tract-level or other features attributed to each case. Or alternatively e.g. a tract-level analysis with some summary of the number or type of encounters merged in. That's why we do the spatial join above. But for this map we'll need both tables---the  `la_tracts` table and the `la_pip_clean` table. This is because one has the tract map shapes and the other has the point locations of the FEs. The base tract map looks like this:
 
-```{r}F
+```{r}
 la_tracts |> 
   ggplot() + 
   geom_sf()
