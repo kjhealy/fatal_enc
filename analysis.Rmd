@@ -1,11 +1,11 @@
 ---
-title: "Fatal Encounters / Census Blocks Proof of Concept"
+title: "Fatal Encounters / Census Data Example"
 author: "Kieran Healy"
 date: "2023-01-29"
 output: html_document
 ---
 
-The `Rmd` file and so on is here: <https://github.com/kjhealy/fatal_enc>
+The `Rmd` file etc is here: <https://github.com/kjhealy/fatal_enc>
 
 ```{r setup, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -287,5 +287,5 @@ ggsave(here("figures", "pip-example.pdf"), plot = p, width = 12, height = 10)
 ggsave(here("figures", "pip-example.png"), plot = p, width = 12, height = 10, bg = "white")
 ```
 
-
+We did this example at the tract level, and just for one county. Next steps would be to do this across a variety of different geographies---`tidycensus` supports everything the Census API can deliver. 
 

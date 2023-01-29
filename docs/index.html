@@ -13,7 +13,7 @@
 
 <meta name="date" content="2023-01-29" />
 
-<title>Fatal Encounters / Census Blocks Proof of Concept</title>
+<title>Fatal Encounters / Census Data Example</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,15 +350,14 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">Fatal Encounters / Census Blocks Proof of
-Concept</h1>
+<h1 class="title toc-ignore">Fatal Encounters / Census Data Example</h1>
 <h4 class="author">Kieran Healy</h4>
 <h4 class="date">2023-01-29</h4>
 
 </div>
 
 
-<p>The <code>Rmd</code> file and so on is here: <a href="https://github.com/kjhealy/fatal_enc" class="uri">https://github.com/kjhealy/fatal_enc</a></p>
+<p>The <code>Rmd</code> file etc is here: <a href="https://github.com/kjhealy/fatal_enc" class="uri">https://github.com/kjhealy/fatal_enc</a></p>
 <pre class="r"><code>knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse) # Make sure you have the latest version
@@ -764,6 +763,10 @@ la_pip_clean &lt;- st_transform(la_pip_clean, &quot;EPSG:6423&quot;)</code></pre
 <p>Save it out:</p>
 <pre class="r"><code>ggsave(here(&quot;figures&quot;, &quot;pip-example.pdf&quot;), plot = p, width = 12, height = 10)
 ggsave(here(&quot;figures&quot;, &quot;pip-example.png&quot;), plot = p, width = 12, height = 10, bg = &quot;white&quot;)</code></pre>
+<p>We did this example at the tract level, and just for one county. Next
+steps would be to do this across a variety of different
+geographies—<code>tidycensus</code> supports everything the Census API
+can deliver.</p>
 </div>
 
 
