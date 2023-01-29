@@ -57,6 +57,14 @@ fatal_ca <- fatal_df |>
 
 ```
 
+Now we have,
+
+```{r}
+fatal_ca 
+```
+
+And we have, 
+
 
 ## Get Tidycensus Data
 
@@ -83,12 +91,6 @@ la_tract_income <- get_acs(
 ```
 
 Now we have, 
-
-```{r}
-fatal_ca 
-```
-
-And we have, 
 
 ```{r}
 la_tract_income
@@ -123,7 +125,7 @@ You can see that `la_pip` is still all incidents in California. But now the ones
 
 ## Checking
 
-But we still need to check! Let's drop all the rows with missing values on `tract`, which should give us all and only LA County tracts.  
+But we still need to check! Let's drop all the rows with missing values on `tract`, which should give us all and only FEs in LA County tracts.  
 
 ```{r}
 la_pip <- ca_pip |> 
@@ -142,7 +144,7 @@ ggplot(la_pip) +
 
 Looks OK. 
 
-But, I also know there are some bad Lat/Lon records in the data. Here's the `fatal_ca` table again, filtered manually by the location data in it:
+But, I also know there are some bad Lat/Lon records in the data, because I didn't do it this way first. Here's the `fatal_ca` table again, filtered manually by the location data in it:
 
 ```{r}
 fatal_ca |> 
@@ -177,7 +179,7 @@ This is the bad record. There's an Elmer Ave in North Hollywood, consistent
 with the rest of the record, but the Lat and Long are wrong. (That location is in the middle
 of the Barents Sea, in the Arctic.)  
 
-The spatial join drops it because the Lat/Lon doesn't correspond to an LA County tract. But that record is in the data as a Fatal Encounter. Let's ignore it for now. But! I don't like it that I found a bad geo record in the FE data on the very first random pass through. 
+This might be easy to miss in a join because the Lat/Lon doesn't correspond to an LA County tract. The row would still be in the datat but if we droped on `tract` after the join we'd lose that case. But that it is in fact a Fatal Encounter that happened in an LA County tract. I'm going to ignore it for now. But this is the sort of thing you have to be careful of. And also, I don't like it that I found a bad geo record in the FE data on the very first random pass through. 
 
 ## Second cut at the pointwise map:
 
@@ -194,9 +196,9 @@ la_pip_clean <- la_pip |>
 ```
 
 
-## Track Checking
+## Tracts + Points
 
-For a nice map we'll need two objects---the  tract table and the `la_pip_clean` table. This is because one has the tract map shapes and the other has the point locations of the FEs. Let's use the Census polygons now. The base map looks like this:
+For a model you might use e.g. an encounter-level table of data with tract-level or other features attributed to each case. Or alternatively e.g. a tract-level analysis with some summary of the number or type of encounters merged in. But for this map we'll need both tables---the  tract table and the `la_pip_clean` table. This is because one has the tract map shapes and the other has the point locations of the FEs. The base tract map looks like this:
 
 ```{r}F
 la_tract_income |> 
@@ -204,7 +206,7 @@ la_tract_income |>
   geom_sf()
 ```
 
-The two weird tracts in the south are Santa Catalina Island and San Clemente Island. Let's get rid of those. 
+We're going to put the points on top in a separate layer. The two weird tracts in the south are Santa Catalina Island and San Clemente Island. Let's get rid of those. 
 
 ```{r}
 la_tract_income_clean <- la_tract_income |> 
