@@ -241,17 +241,18 @@ p <- la_tract_income_clean |>
   guides(colour = guide_legend(override.aes = list(size=2, color = "orange"))) + 
   labs(fill = "Estimated Income", 
        color = NULL,
-       title = "Point-in-Polygon Proof of Concept", 
+       title = "Point-in-Polygon Example", 
        subtitle = "ACS Income Data and Fatal Encounters Data for Los Angeles County, at the Census Tract Level") + 
   kjhslides::kjh_theme_map() 
   
 print(p)
 ```
 
-Save it out to a PDF:
+Save it out:
 
 ```{r}
 ggsave(here("figures", "pip-example.pdf"), plot = p, width = 12, height = 10)
+ggsave(here("figures", "pip-example.png"), plot = p, width = 12, height = 10, bg = "white")
 ```
 
 
