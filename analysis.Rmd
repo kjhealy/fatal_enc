@@ -78,10 +78,10 @@ Now get some tract-level data from the Census. We'll use ACS data for LA County 
 ```{r}
 
 my_vars <- tribble(
-  ~variable, ~sn,
-  "B25026_001", "pop_ohu", # Total population in occupied housing units, for tract-level
-  "B19013_001", "hhincome", 
-  "B02001_003", "total_black",
+  ~variable, ~sn, 
+  "B25026_001", "pop_ohu", 
+  "B19013_001", "hhincome",
+  "B02001_003", "total_black"
 )
 
 la_tracts <- get_acs(
@@ -91,6 +91,9 @@ la_tracts <- get_acs(
   county = "Los Angeles", 
   geometry = TRUE) |>   
   # Split the NAME field into useful columns
+  # The regular expression here will need to be changed 
+  # depending on the level of aggregation you are working with, because the
+  # content of NAME will change correspondingly.
   separate_wider_regex(
     NAME,
     patterns = c(
@@ -219,9 +222,15 @@ la_pip_clean <- la_pip |>
 ```
 
 
+```{r}
+la_pip_clean |> 
+  select(name, race, location_of_death_city, total_black_estimate, pop_ohu_estimate)
+```
+
+
 ## Tracts + Points
 
-For a model you might use e.g. an encounter-level table of data with tract-level or other features attributed to each case. Or alternatively e.g. a tract-level analysis with some summary of the number or type of encounters merged in. That's why we do the spatial join above. But for this map we'll need both tables---the  `la_tracts` table and the `la_pip_clean` table. This is because one has the tract map shapes and the other has the point locations of the FEs. The base tract map looks like this:
+For a model you might use e.g. an encounter-level table of data with tract-level or other features attributed to each case. Or alternatively e.g. a tract-level analysis with some summary of the number or type of encounters merged in and counted/averaged. (The unit of observation/analysis will matter a _lot_, substantively.) That's why we do the spatial join above. But for this map we'll need both tables---the  `la_tracts` table and the `la_pip_clean` table. This is because one has the tract map shapes and the other has the point locations of the FEs. The base tract map looks like this:
 
 ```{r}
 la_tracts |> 
@@ -262,7 +271,7 @@ p <- la_tracts_clean |>
           fill = "orange",
           pch = 21, 
           stroke = 0.2,
-          size = 0.8) +
+          size = 0.2) +
   scale_fill_binned_sequential(labels = scales::label_dollar()) +
   scale_color_manual(values = "black") + 
   guides(colour = guide_legend(override.aes = list(size=2, color = "orange"))) + 
