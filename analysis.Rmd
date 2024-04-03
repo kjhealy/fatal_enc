@@ -48,6 +48,10 @@ fatal_df <- fatal_df_raw |>
   select(unique_id:imputation_probability, date, 
          location_of_injury_address:longitude) |> 
   relocate(unique_id, latitude, longitude, everything())
+
+## Save local
+write_csv(fatal_df, here("data", "fatal_df.csv"))
+
 ```
 
 Let's do, say, census tracts for Los Angeles County, California. 
@@ -97,8 +101,8 @@ la_tracts <- get_acs(
   separate_wider_regex(
     NAME,
     patterns = c(
-      "Census Tract ", tract = "\\d+.\\d+", ", ",
-      county = "[^,]+", ", ",
+      "Census Tract ", tract = "\\d+.\\d+", "; ",
+      county = "[^,]+", "; ",
       state = ".*"
     )
   ) |> 
@@ -270,7 +274,7 @@ p <- la_tracts_clean |>
           mapping = aes(color = fe),  
           fill = "orange",
           pch = 21, 
-          stroke = 0.2,
+          stroke = 0.1,
           size = 0.2) +
   scale_fill_binned_sequential(labels = scales::label_dollar()) +
   scale_color_manual(values = "black") + 
